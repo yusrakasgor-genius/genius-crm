@@ -1967,6 +1967,48 @@ document.addEventListener('keydown', e => {
 });
 
 // ────────────────────────────
+//  IMAGE PASTE & DROP INTO EDITOR
+// ────────────────────────────
+function insertImageInEditor(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const img = `<img src="${ev.target.result}" style="max-width:100%;height:auto;display:block;margin:4px 0;border-radius:4px;" draggable="false">`;
+    editor.focus();
+    document.execCommand('insertHTML', false, img);
+    saveCurrentPage();
+  };
+  reader.readAsDataURL(file);
+}
+
+editor.addEventListener('paste', e => {
+  const items = (e.clipboardData || window.clipboardData).items;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.startsWith('image/')) {
+      e.preventDefault();
+      insertImageInEditor(items[i].getAsFile());
+      return;
+    }
+  }
+});
+
+editor.addEventListener('dragover', e => {
+  if ([...e.dataTransfer.items].some(it => it.type.startsWith('image/'))) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  }
+});
+
+editor.addEventListener('drop', e => {
+  const files = [...(e.dataTransfer.files || [])];
+  const imgFile = files.find(f => f.type.startsWith('image/'));
+  if (imgFile) {
+    e.preventDefault();
+    insertImageInEditor(imgFile);
+  }
+});
+
+// ────────────────────────────
 //  INIT
 // ────────────────────────────
 (function init() {
