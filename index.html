@@ -384,9 +384,197 @@
   [data-depth="1"] .tree-item { padding-left: 22px; }
   [data-depth="2"] .tree-item { padding-left: 34px; }
   [data-depth="3"] .tree-item { padding-left: 46px; }
+
+  /* ══ AUTH SCREEN ══ */
+  #auth-screen {
+    position: fixed; inset: 0; z-index: 2000;
+    background: #19191b;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .auth-card {
+    background: #fff;
+    border-radius: 14px;
+    width: 400px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,.5);
+  }
+
+  .auth-card-header {
+    background: #19191b;
+    padding: 28px 32px 24px;
+    display: flex; align-items: center; gap: 12px;
+  }
+
+  .auth-logo {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: #fcc012;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; color: #19191b; font-size: 16px; flex-shrink: 0;
+  }
+
+  .auth-card-header h2 { color: #fff; font-size: 18px; font-weight: 700; }
+  .auth-card-header p  { color: #888; font-size: 12px; margin-top: 2px; }
+
+  .auth-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .auth-tab {
+    flex: 1; padding: 13px;
+    text-align: center; font-size: 13px; font-weight: 600;
+    color: var(--text-muted); cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all .15s;
+  }
+  .auth-tab.active { color: #19191b; border-bottom-color: #fcc012; }
+
+  .auth-body { padding: 28px 32px; display: flex; flex-direction: column; gap: 14px; }
+
+  .auth-field { display: flex; flex-direction: column; gap: 5px; }
+  .auth-field label { font-size: 12px; font-weight: 600; color: var(--text); }
+
+  .auth-field input {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 14px; outline: none;
+    font-family: inherit;
+    transition: border .15s;
+  }
+  .auth-field input:focus { border-color: #fcc012; box-shadow: 0 0 0 3px rgba(252,192,18,.15); }
+
+  .auth-btn {
+    background: #19191b; color: #fff;
+    border: none; border-radius: var(--radius);
+    padding: 11px; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: background .15s; margin-top: 4px;
+    font-family: inherit;
+  }
+  .auth-btn:hover { background: #fcc012; color: #19191b; }
+  .auth-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .auth-error {
+    background: #fef2f2; color: #dc2626;
+    border: 1px solid #fecaca; border-radius: var(--radius);
+    padding: 9px 12px; font-size: 12px; display: none;
+  }
+
+  .auth-success {
+    background: #f0fdf4; color: #16a34a;
+    border: 1px solid #bbf7d0; border-radius: var(--radius);
+    padding: 9px 12px; font-size: 12px; display: none;
+  }
+
+  /* OTP ekranı */
+  #otp-view { display: none; }
+  #otp-view .otp-hint {
+    font-size: 13px; color: var(--text-muted); text-align: center;
+    line-height: 1.6; margin-bottom: 4px;
+  }
+  #otp-view .otp-email { font-weight: 700; color: #19191b; }
+
+  .otp-inputs {
+    display: flex; gap: 8px; justify-content: center; margin: 4px 0;
+  }
+
+  .otp-inputs input {
+    width: 44px; height: 52px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    text-align: center; font-size: 22px; font-weight: 700;
+    outline: none; font-family: inherit;
+    transition: border .15s;
+  }
+  .otp-inputs input:focus { border-color: #fcc012; box-shadow: 0 0 0 3px rgba(252,192,18,.15); }
+
+  .auth-switch {
+    text-align: center; font-size: 12px; color: var(--text-muted);
+    padding-bottom: 4px;
+  }
+  .auth-switch a { color: #19191b; font-weight: 600; cursor: pointer; text-decoration: underline; }
+
+  /* top-right user badge */
+  #user-badge {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--text-muted);
+  }
+  #user-badge .ub-email { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #user-badge .ub-logout {
+    background: none; border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 3px 8px;
+    font-size: 11px; cursor: pointer; color: var(--text-muted);
+    transition: all .12s;
+  }
+  #user-badge .ub-logout:hover { border-color: #ef4444; color: #ef4444; }
 </style>
 </head>
 <body>
+
+<!-- ══ AUTH SCREEN ══ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-card-header">
+      <div class="auth-logo">G</div>
+      <div>
+        <h2>Genius CRM</h2>
+        <p>Müşteri yönetim platformu</p>
+      </div>
+    </div>
+
+    <!-- Login / Signup sekmeleri -->
+    <div id="auth-main-view">
+      <div class="auth-tabs">
+        <div class="auth-tab active" id="tab-login" onclick="switchTab('login')">Giriş Yap</div>
+        <div class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Kayıt Ol</div>
+      </div>
+
+      <div class="auth-body">
+        <div class="auth-error" id="auth-error"></div>
+        <div class="auth-success" id="auth-success"></div>
+
+        <div class="auth-field">
+          <label>E-posta</label>
+          <input type="email" id="auth-email" placeholder="ornek@sirket.com" autocomplete="email">
+        </div>
+        <div class="auth-field">
+          <label>Şifre</label>
+          <input type="password" id="auth-password" placeholder="En az 6 karakter" autocomplete="current-password">
+        </div>
+
+        <button class="auth-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">Giriş Yap</button>
+
+        <div class="auth-switch" id="auth-switch-text">
+          Hesabın yok mu? <a onclick="switchTab('signup')">Kayıt ol</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- OTP doğrulama görünümü -->
+    <div id="otp-view">
+      <div class="auth-body">
+        <div class="auth-error" id="otp-error"></div>
+        <p class="otp-hint">
+          <span class="otp-email" id="otp-email-display"></span> adresine gönderilen<br>
+          <strong>6 haneli doğrulama kodunu</strong> girin:
+        </p>
+        <div class="otp-inputs" id="otp-inputs">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+          <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+        </div>
+        <button class="auth-btn" id="otp-submit-btn" onclick="handleOtpSubmit()">Doğrula</button>
+        <div class="auth-switch">
+          <a onclick="backToAuth()">← Geri dön</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ══ SIDEBAR ══ -->
 <div id="sidebar">
@@ -437,6 +625,10 @@
         <button class="btn-icon" onclick="addTable()">📊 Tablo</button>
         <button class="btn-icon" onclick="savePage()">💾 Kaydet</button>
         <button class="btn-icon" onclick="exportPage()">📤 Dışa Aktar</button>
+        <div id="user-badge">
+          <span class="ub-email" id="ub-email"></span>
+          <button class="ub-logout" onclick="logout()">Çıkış</button>
+        </div>
       </div>
     </div>
     <div id="topbar-row2">
@@ -499,13 +691,170 @@
 
 <script>
 // ────────────────────────────
-//  SUPABASE REST API
+//  SUPABASE CONFIG
 // ────────────────────────────
-const SB_URL = 'https://pseefxuqrrqjswlyzonx.supabase.co/rest/v1';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzZWVmeHVxcnJxanN3bHl6b254Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTY0NTYsImV4cCI6MjA5MzgzMjQ1Nn0.9z3PFWSv9smNhdaFZNsFKCC9szFvrAs71TD8wT-BUUc';
+const SB_PROJECT = 'https://pseefxuqrrqjswlyzonx.supabase.co';
+const SB_URL     = SB_PROJECT + '/rest/v1';
+const SB_AUTH    = SB_PROJECT + '/auth/v1';
+const SB_ANON    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzZWVmeHVxcnJxanN3bHl6b254Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTY0NTYsImV4cCI6MjA5MzgzMjQ1Nn0.9z3PFWSv9smNhdaFZNsFKCC9szFvrAs71TD8wT-BUUc';
 
+// Oturum yönetimi
+let session = JSON.parse(localStorage.getItem('genius_session') || 'null');
+
+function getToken() { return session?.access_token || SB_ANON; }
+
+// ────────────────────────────
+//  AUTH FUNCTIONS
+// ────────────────────────────
+let pendingEmail = '';
+let currentTab   = 'login';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+  document.getElementById('auth-submit-btn').textContent = tab === 'login' ? 'Giriş Yap' : 'Kayıt Ol';
+  document.getElementById('auth-switch-text').innerHTML = tab === 'login'
+    ? 'Hesabın yok mu? <a onclick="switchTab(\'signup\')">Kayıt ol</a>'
+    : 'Zaten hesabın var mı? <a onclick="switchTab(\'login\')">Giriş yap</a>';
+  clearAuthMessages();
+}
+
+function clearAuthMessages() {
+  ['auth-error','auth-success','otp-error'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = 'none'; el.textContent = ''; }
+  });
+}
+
+function showAuthError(msg)   { const el = document.getElementById('auth-error'); el.textContent = msg; el.style.display = 'block'; }
+function showAuthSuccess(msg) { const el = document.getElementById('auth-success'); el.textContent = msg; el.style.display = 'block'; }
+function showOtpError(msg)    { const el = document.getElementById('otp-error'); el.textContent = msg; el.style.display = 'block'; }
+
+async function handleAuthSubmit() {
+  clearAuthMessages();
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const btn      = document.getElementById('auth-submit-btn');
+
+  if (!email || !password) { showAuthError('E-posta ve şifre zorunludur.'); return; }
+  if (password.length < 6) { showAuthError('Şifre en az 6 karakter olmalıdır.'); return; }
+
+  btn.disabled = true; btn.textContent = 'Lütfen bekleyin...';
+
+  try {
+    if (currentTab === 'signup') {
+      const res = await authFetch('/signup', { email, password });
+      if (res.error) throw new Error(res.error.message || res.msg || JSON.stringify(res));
+      pendingEmail = email;
+      showOtpScreen(email);
+    } else {
+      const res = await authFetch('/token?grant_type=password', { email, password });
+      if (res.error || res.error_description) throw new Error(res.error_description || res.error?.message || 'Giriş başarısız.');
+      onLoginSuccess(res);
+    }
+  } catch(e) {
+    showAuthError(e.message.includes('already registered') ? 'Bu e-posta zaten kayıtlı.' :
+                  e.message.includes('Invalid login')      ? 'E-posta veya şifre hatalı.' :
+                  e.message.includes('Email not confirmed') ? 'E-postanız doğrulanmamış. Lütfen doğrulama kodunu girin.' :
+                  e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = currentTab === 'login' ? 'Giriş Yap' : 'Kayıt Ol';
+  }
+}
+
+function showOtpScreen(email) {
+  document.getElementById('auth-main-view').style.display = 'none';
+  document.getElementById('otp-view').style.display = 'block';
+  document.getElementById('otp-email-display').textContent = email;
+  const inputs = document.querySelectorAll('#otp-inputs input');
+  inputs.forEach((inp, i) => {
+    inp.value = '';
+    inp.addEventListener('input', () => {
+      inp.value = inp.value.replace(/\D/g, '');
+      if (inp.value && i < inputs.length - 1) inputs[i + 1].focus();
+    });
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !inp.value && i > 0) inputs[i - 1].focus();
+    });
+    inp.addEventListener('paste', e => {
+      const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+      inputs.forEach((box, j) => { box.value = paste[j] || ''; });
+      e.preventDefault();
+    });
+  });
+  setTimeout(() => inputs[0].focus(), 100);
+}
+
+function backToAuth() {
+  document.getElementById('otp-view').style.display = 'none';
+  document.getElementById('auth-main-view').style.display = 'block';
+  clearAuthMessages();
+}
+
+async function handleOtpSubmit() {
+  clearAuthMessages();
+  const inputs = document.querySelectorAll('#otp-inputs input');
+  const token  = Array.from(inputs).map(i => i.value).join('');
+  const btn    = document.getElementById('otp-submit-btn');
+
+  if (token.length !== 6) { showOtpError('6 haneli kodu eksiksiz girin.'); return; }
+
+  btn.disabled = true; btn.textContent = 'Doğrulanıyor...';
+
+  try {
+    const res = await authFetch('/verify', { email: pendingEmail, token, type: 'signup' });
+    if (res.error || res.error_code) throw new Error(res.error?.message || res.msg || 'Kod hatalı veya süresi dolmuş.');
+    onLoginSuccess(res);
+  } catch(e) {
+    showOtpError(e.message.includes('expired') ? 'Kodun süresi dolmuş. Yeniden kayıt olun.' :
+                 e.message.includes('invalid') ? 'Kod hatalı, tekrar deneyin.' : e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Doğrula';
+  }
+}
+
+function onLoginSuccess(data) {
+  session = { access_token: data.access_token, refresh_token: data.refresh_token, user: data.user };
+  localStorage.setItem('genius_session', JSON.stringify(session));
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('ub-email').textContent = session.user?.email || '';
+  loadFromSupabase();
+}
+
+async function logout() {
+  try { await authFetch('/logout', {}, 'POST', true); } catch(_) {}
+  session = null;
+  localStorage.removeItem('genius_session');
+  localStorage.removeItem('genius_crm_ui');
+  location.reload();
+}
+
+async function authFetch(path, body, method = 'POST', useToken = false) {
+  const headers = {
+    'apikey': SB_ANON,
+    'Content-Type': 'application/json'
+  };
+  if (useToken && session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
+  const res = await fetch(SB_AUTH + path, { method, headers, body: JSON.stringify(body) });
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
+}
+
+// OTP klavye kısayolu
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (document.getElementById('otp-view').style.display !== 'none') handleOtpSubmit();
+    else if (document.getElementById('auth-screen').style.display !== 'none') handleAuthSubmit();
+  }
+});
+
+// ────────────────────────────
+//  SUPABASE DATA API
+// ────────────────────────────
 async function sbReq(method, path, body, prefer) {
-  const headers = { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json' };
+  const headers = { 'apikey': SB_ANON, 'Authorization': `Bearer ${getToken()}`, 'Content-Type': 'application/json' };
   if (prefer) headers['Prefer'] = prefer;
   const res = await fetch(`${SB_URL}/${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
   if (!res.ok) { const e = await res.text(); throw new Error(e); }
@@ -542,6 +891,9 @@ async function loadFromSupabase() {
     const rows = await sbGet('crm_nodes?select=*&order=sort_order.asc');
     db.nodes = {};
 
+    // Sanal root node (lokal, DB'de saklanmaz)
+    db.nodes['root'] = { id:'root', label:'Root', type:'root', children:[], parent:null };
+
     rows.forEach(r => {
       db.nodes[r.id] = {
         id: r.id, label: r.label, type: r.type,
@@ -552,9 +904,8 @@ async function loadFromSupabase() {
     });
 
     rows.forEach(r => {
-      if (r.parent_id && db.nodes[r.parent_id]) {
-        db.nodes[r.parent_id].children.push(r.id);
-      }
+      const parentKey = r.parent_id || 'root';
+      if (db.nodes[parentKey]) db.nodes[parentKey].children.push(r.id);
     });
 
     Object.values(db.nodes).forEach(node => {
@@ -816,10 +1167,12 @@ async function confirmModal() {
   document.getElementById('modal-overlay').style.display = 'none';
 
   try {
+    const userId = session?.user?.id;
+
     if (modalMode === 'customer') {
       const id = uid();
       const sortOrder = (db.nodes['root']?.children.length || 0) + 1;
-      await sbPost('crm_nodes', { id, label:name, type:'customer', parent_id:'root', sort_order:sortOrder });
+      await sbPost('crm_nodes', { id, label:name, type:'customer', parent_id:null, sort_order:sortOrder, user_id:userId });
       db.nodes[id] = { id, label:name, type:'customer', children:[], parent:'root', sort_order:sortOrder };
       db.nodes['root'].children.push(id);
 
@@ -828,7 +1181,7 @@ async function confirmModal() {
       const id = uid();
       const parentNode = db.nodes[modalParentId];
       const sortOrder = (parentNode?.children.length || 0) + 1;
-      const row = { id, label:name, type, parent_id:modalParentId, sort_order:sortOrder, content:'', title:name, date:today() };
+      const row = { id, label:name, type, parent_id:modalParentId, sort_order:sortOrder, content:'', title:name, date:today(), user_id:userId };
       await sbPost('crm_nodes', row);
       db.nodes[id] = { id, label:name, type, children:[], parent:modalParentId, content:'', title:name, date:today(), sort_order:sortOrder };
       if (parentNode) parentNode.children.push(id);
@@ -1048,7 +1401,15 @@ document.addEventListener('keydown', e => {
 // ────────────────────────────
 //  INIT
 // ────────────────────────────
-loadFromSupabase();
+(function init() {
+  if (session?.access_token) {
+    // Oturum var: auth ekranını gizle, CRM'i yükle
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('ub-email').textContent = session.user?.email || '';
+    loadFromSupabase();
+  }
+  // Oturum yoksa auth-screen görünür kalır (display:flex)
+})();
 </script>
 </body>
 </html>
