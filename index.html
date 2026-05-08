@@ -565,16 +565,16 @@
         <input id="setup-url" placeholder="https://xxxxxxxxxxxx.supabase.co" type="url">
       </div>
       <div class="form-group full">
-        <label>API Key (Secret veya Publishable)</label>
-        <input id="setup-key" placeholder="sb_secret_... veya sb_publishable_..." type="password">
-        <span style="font-size:11px;color:var(--text-light);margin-top:3px">Supabase Dashboard → Settings → API</span>
+        <label>Publishable (Anon) API Key</label>
+        <input id="setup-key" placeholder="sb_publishable_..." type="password">
+        <span style="font-size:11px;color:var(--text-light);margin-top:3px">Supabase Dashboard → Settings → API → Publishable key</span>
       </div>
     </div>
     <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px">
       <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px" onclick="connectSupabase()">Bağlan ve Başla</button>
       <div id="setup-error" style="color:var(--danger);font-size:13px;display:none"></div>
     </div>
-    <p style="font-size:11px;color:var(--text-light);margin-top:16px">⚙️ Tabloları oluşturmak için önce <strong>setup.sql</strong>'i Supabase SQL Editor'da çalıştırın.</p>
+    <p style="font-size:11px;color:var(--text-light);margin-top:16px">⚠️ Secret key değil, <strong>Publishable (anon) key</strong> kullanın. Tabloları kurmak için <strong>setup.sql</strong>'i SQL Editor'da çalıştırın.</p>
   </div>
 </div>
 
@@ -637,6 +637,7 @@ function clearSession() {
 }
 
 function getAuthToken() {
+  // After login use the user JWT; before login fall back to publishable key (never secret)
   return currentUser?.access_token || SUPABASE_KEY;
 }
 

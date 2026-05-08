@@ -66,11 +66,17 @@ ALTER TABLE contacts   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE deals      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
 
--- Tüm işlemlere izin ver (anon + authenticated)
-CREATE POLICY "public_all" ON companies  FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "public_all" ON contacts   FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "public_all" ON deals      FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "public_all" ON activities FOR ALL USING (true) WITH CHECK (true);
+-- Tüm işlemlere izin ver (anon + authenticated rolleri için)
+CREATE POLICY "anon_all"  ON companies  FOR ALL TO anon,authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "anon_all"  ON contacts   FOR ALL TO anon,authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "anon_all"  ON deals      FOR ALL TO anon,authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "anon_all"  ON activities FOR ALL TO anon,authenticated USING (true) WITH CHECK (true);
+
+-- anon ve authenticated rollerine tablo erişim yetkisi
+GRANT SELECT, INSERT, UPDATE, DELETE ON companies  TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON contacts   TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON deals      TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON activities TO anon, authenticated;
 
 -- ── Örnek Veriler ───────────────────────────────────
 INSERT INTO companies (name, sector, employees, website, phone, email, revenue, status, address) VALUES
