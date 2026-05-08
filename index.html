@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Genius CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cabin:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -29,7 +32,7 @@
   }
 
   body {
-    font-family: 'Calibri', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: 'Cabin', 'Calibri', system-ui, sans-serif;
     background: #f3f2f1;
     color: var(--text);
     display: flex;
@@ -303,9 +306,15 @@
   #editor h1, #editor h2, #editor h3 { margin: 12px 0 6px; }
   #editor p { margin: 4px 0; }
   #editor ul, #editor ol { padding-left: 20px; }
-  #editor table { border-collapse: collapse; width: 100%; margin: 8px 0; }
-  #editor td, #editor th { border: 1px solid var(--border); padding: 6px 10px; font-size: 13px; }
-  #editor th { background: #f4f4f5; font-weight: 600; }
+  #editor table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  #editor td, #editor th {
+    border: 1px solid var(--border); padding: 7px 10px; font-size: 13px;
+    min-width: 80px; vertical-align: top; position: relative;
+  }
+  #editor th { background: #f4f4f5; font-weight: 700; }
+  #editor td:focus, #editor th:focus { outline: 2px solid #fcc012; outline-offset: -2px; background: #fffdf0; }
+  #editor tr:hover td, #editor tr:hover th { background: #fafafa; }
+  #editor tr:hover th { background: #f0f0f0; }
   #editor blockquote { border-left: 3px solid var(--accent); padding-left: 12px; color: var(--text-muted); margin: 8px 0; }
 
   /* ══ EMPTY STATE ══ */
@@ -384,6 +393,74 @@
   [data-depth="1"] .tree-item { padding-left: 22px; }
   [data-depth="2"] .tree-item { padding-left: 34px; }
   [data-depth="3"] .tree-item { padding-left: 46px; }
+
+  /* ══ TABLE TOOLBAR (tablo seçince çıkar) ══ */
+  #table-toolbar {
+    position: fixed;
+    background: #19191b;
+    border-radius: 8px;
+    padding: 5px 8px;
+    display: none;
+    align-items: center;
+    gap: 3px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.35);
+    z-index: 500;
+  }
+
+  #table-toolbar button {
+    background: none; border: none; cursor: pointer;
+    color: #e8e8e8; font-size: 12px; padding: 4px 8px;
+    border-radius: 5px; transition: background .1s;
+    font-family: 'Cabin', sans-serif; white-space: nowrap;
+  }
+  #table-toolbar button:hover { background: #333; }
+  #table-toolbar .tb-sep { width: 1px; height: 16px; background: #444; margin: 0 2px; flex-shrink: 0; }
+  #table-toolbar .tb-danger:hover { background: #7f1d1d; color: #fca5a5; }
+
+  /* ══ TABLE INSERT MODAL ══ */
+  #table-modal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.45);
+    display: none; align-items: center; justify-content: center;
+    z-index: 1000; animation: fadeIn .15s;
+  }
+
+  #table-modal .tm-card {
+    background: #fff; border-radius: 10px; padding: 24px;
+    width: 320px; box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    animation: slideUp .15s;
+  }
+
+  #table-modal h3 { font-size: 15px; font-weight: 700; margin-bottom: 16px; }
+
+  .tm-grid-picker {
+    display: grid;
+    grid-template-columns: repeat(8, 28px);
+    gap: 3px;
+    margin-bottom: 12px;
+  }
+
+  .tm-cell {
+    width: 28px; height: 28px;
+    border: 1px solid var(--border);
+    border-radius: 3px; cursor: pointer;
+    transition: background .08s, border-color .08s;
+  }
+  .tm-cell.hover { background: #fff3cd; border-color: #fcc012; }
+
+  .tm-label {
+    font-size: 12px; color: var(--text-muted);
+    margin-bottom: 14px; min-height: 18px;
+  }
+
+  .tm-manual { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
+  .tm-manual input {
+    width: 60px; padding: 6px 8px; border: 1px solid var(--border);
+    border-radius: var(--radius); font-size: 13px; outline: none;
+    text-align: center; font-family: inherit;
+  }
+  .tm-manual input:focus { border-color: #fcc012; }
+  .tm-manual span { font-size: 12px; color: var(--text-muted); }
 
   /* ══ AUTH SCREEN ══ */
   #auth-screen {
@@ -622,7 +699,7 @@
     <div id="topbar-row1">
       <span id="page-title-display" class="placeholder">Sayfa seçilmedi</span>
       <div id="topbar-actions">
-        <button class="btn-icon" onclick="addTable()">📊 Tablo</button>
+        <button class="btn-icon" onclick="openTableModal()">📊 Tablo</button>
         <button class="btn-icon" onclick="savePage()">💾 Kaydet</button>
         <button class="btn-icon" onclick="exportPage()">📤 Dışa Aktar</button>
         <div id="user-badge">
@@ -688,6 +765,39 @@
 
 <!-- ══ CONTEXT MENU ══ -->
 <div id="ctx-menu" class="ctx-menu" style="display:none;"></div>
+
+<!-- ══ TABLE TOOLBAR ══ -->
+<div id="table-toolbar">
+  <button onclick="tableAddRowAbove()">↑ Satır ekle</button>
+  <button onclick="tableAddRowBelow()">↓ Satır ekle</button>
+  <div class="tb-sep"></div>
+  <button onclick="tableAddColLeft()">← Sütun ekle</button>
+  <button onclick="tableAddColRight()">→ Sütun ekle</button>
+  <div class="tb-sep"></div>
+  <button onclick="tableDeleteRow()" class="tb-danger">Satır sil</button>
+  <button onclick="tableDeleteCol()" class="tb-danger">Sütun sil</button>
+  <div class="tb-sep"></div>
+  <button onclick="tableDelete()" class="tb-danger">🗑 Tablo sil</button>
+</div>
+
+<!-- ══ TABLE INSERT MODAL ══ -->
+<div id="table-modal" onclick="closeTableModal(event)">
+  <div class="tm-card" onclick="event.stopPropagation()">
+    <h3>📊 Tablo Ekle</h3>
+    <div class="tm-label" id="tm-label">Boyut seçin</div>
+    <div class="tm-grid-picker" id="tm-grid"></div>
+    <div class="tm-manual">
+      <input type="number" id="tm-rows" min="1" max="20" placeholder="Sat." value="3">
+      <span>×</span>
+      <input type="number" id="tm-cols" min="1" max="20" placeholder="Süt." value="3">
+      <span style="flex:1"></span>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn-secondary" onclick="closeTableModal()">İptal</button>
+      <button class="btn-primary" onclick="insertTableManual()">Ekle</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ────────────────────────────
@@ -1309,15 +1419,192 @@ function exec(cmd, val) {
   document.execCommand(cmd, false, val || null);
 }
 
-function addTable() {
+// ────────────────────────────
+//  TABLE INSERT MODAL
+// ────────────────────────────
+let savedRange = null;
+
+function openTableModal() {
+  if (!ui.activePage) return;
+  // Cursor pozisyonunu kaydet
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount) savedRange = sel.getRangeAt(0).cloneRange();
+
+  buildGridPicker();
+  document.getElementById('table-modal').style.display = 'flex';
+  document.getElementById('tm-rows').value = 3;
+  document.getElementById('tm-cols').value = 3;
+}
+
+function closeTableModal(e) {
+  if (e && e.target !== document.getElementById('table-modal')) return;
+  document.getElementById('table-modal').style.display = 'none';
+}
+
+function buildGridPicker() {
+  const grid = document.getElementById('tm-grid');
+  grid.innerHTML = '';
+  const ROWS = 6, COLS = 8;
+  for (let r = 1; r <= ROWS; r++) {
+    for (let c = 1; c <= COLS; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'tm-cell';
+      cell.dataset.r = r; cell.dataset.c = c;
+      cell.addEventListener('mouseenter', () => highlightGrid(r, c));
+      cell.addEventListener('click', () => { insertTable(r, c); document.getElementById('table-modal').style.display = 'none'; });
+      grid.appendChild(cell);
+    }
+  }
+  grid.addEventListener('mouseleave', () => {
+    grid.querySelectorAll('.tm-cell').forEach(el => el.classList.remove('hover'));
+    document.getElementById('tm-label').textContent = 'Boyut seçin';
+  });
+}
+
+function highlightGrid(rows, cols) {
+  document.querySelectorAll('.tm-cell').forEach(el => {
+    el.classList.toggle('hover', +el.dataset.r <= rows && +el.dataset.c <= cols);
+  });
+  document.getElementById('tm-label').textContent = `${rows} satır × ${cols} sütun`;
+  document.getElementById('tm-rows').value = rows;
+  document.getElementById('tm-cols').value = cols;
+}
+
+function insertTableManual() {
+  const r = Math.max(1, Math.min(20, +document.getElementById('tm-rows').value || 3));
+  const c = Math.max(1, Math.min(20, +document.getElementById('tm-cols').value || 3));
+  insertTable(r, c);
+  document.getElementById('table-modal').style.display = 'none';
+}
+
+function insertTable(rows, cols) {
+  const editor = document.getElementById('editor');
+  editor.focus();
+
+  // Kaydedilen cursor'u geri yükle
+  if (savedRange) {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedRange);
+  }
+
   let html = '<table>';
-  for (let r = 0; r < 3; r++) {
+  for (let r = 0; r < rows; r++) {
     html += '<tr>';
-    for (let c = 0; c < 3; c++) html += r === 0 ? `<th>Başlık ${c+1}</th>` : '<td>&nbsp;</td>';
+    for (let c = 0; c < cols; c++) {
+      html += r === 0
+        ? `<th contenteditable="true">Başlık ${c + 1}</th>`
+        : `<td contenteditable="true"></td>`;
+    }
     html += '</tr>';
   }
   html += '</table><p><br></p>';
   document.execCommand('insertHTML', false, html);
+}
+
+// ────────────────────────────
+//  TABLE TOOLBAR (tıklama ile)
+// ────────────────────────────
+let activeCell = null;
+let activeTable = null;
+
+document.addEventListener('click', e => {
+  const cell = e.target.closest('#editor td, #editor th');
+  const tb = document.getElementById('table-toolbar');
+  if (cell) {
+    activeCell  = cell;
+    activeTable = cell.closest('table');
+    positionTableToolbar(cell);
+  } else if (!tb.contains(e.target)) {
+    tb.style.display = 'none';
+    activeCell  = null;
+    activeTable = null;
+  }
+});
+
+function positionTableToolbar(cell) {
+  const tb   = document.getElementById('table-toolbar');
+  const rect = cell.getBoundingClientRect();
+  tb.style.display = 'flex';
+  // Ekrandan taşma kontrolü
+  const tbW = 520;
+  let left = rect.left;
+  if (left + tbW > window.innerWidth - 8) left = window.innerWidth - tbW - 8;
+  tb.style.left = Math.max(8, left) + 'px';
+  tb.style.top  = (rect.top - 44) + 'px';
+}
+
+function tableAddRowAbove() {
+  if (!activeCell) return;
+  const row    = activeCell.closest('tr');
+  const newRow = buildRow(row.cells.length, false);
+  row.parentNode.insertBefore(newRow, row);
+}
+
+function tableAddRowBelow() {
+  if (!activeCell) return;
+  const row    = activeCell.closest('tr');
+  const newRow = buildRow(row.cells.length, false);
+  row.parentNode.insertBefore(newRow, row.nextSibling);
+}
+
+function buildRow(cols, isHeader) {
+  const tr = document.createElement('tr');
+  for (let i = 0; i < cols; i++) {
+    const cell = document.createElement(isHeader ? 'th' : 'td');
+    cell.contentEditable = true;
+    tr.appendChild(cell);
+  }
+  return tr;
+}
+
+function tableAddColLeft() {
+  if (!activeTable || !activeCell) return;
+  const cellIndex = activeCell.cellIndex;
+  activeTable.querySelectorAll('tr').forEach((row, ri) => {
+    const cell = document.createElement(ri === 0 ? 'th' : 'td');
+    cell.contentEditable = true;
+    row.insertBefore(cell, row.cells[cellIndex]);
+  });
+}
+
+function tableAddColRight() {
+  if (!activeTable || !activeCell) return;
+  const cellIndex = activeCell.cellIndex;
+  activeTable.querySelectorAll('tr').forEach((row, ri) => {
+    const cell = document.createElement(ri === 0 ? 'th' : 'td');
+    cell.contentEditable = true;
+    const ref = row.cells[cellIndex + 1] || null;
+    row.insertBefore(cell, ref);
+  });
+}
+
+function tableDeleteRow() {
+  if (!activeCell) return;
+  const row   = activeCell.closest('tr');
+  const table = activeTable;
+  if (table.rows.length <= 1) { tableDelete(); return; }
+  row.remove();
+  document.getElementById('table-toolbar').style.display = 'none';
+  activeCell = null;
+}
+
+function tableDeleteCol() {
+  if (!activeTable || !activeCell) return;
+  const idx = activeCell.cellIndex;
+  if (activeTable.rows[0].cells.length <= 1) { tableDelete(); return; }
+  activeTable.querySelectorAll('tr').forEach(row => {
+    if (row.cells[idx]) row.deleteCell(idx);
+  });
+  document.getElementById('table-toolbar').style.display = 'none';
+  activeCell = null;
+}
+
+function tableDelete() {
+  if (!activeTable) return;
+  activeTable.remove();
+  document.getElementById('table-toolbar').style.display = 'none';
+  activeTable = null; activeCell = null;
 }
 
 function exportPage() {
