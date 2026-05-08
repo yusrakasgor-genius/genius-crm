@@ -295,6 +295,7 @@
 
   #page-title-input {
     font-size: 26px; font-weight: 700;
+    font-family: 'Cabin', sans-serif;
     border: none; outline: none; width: 100%;
     color: var(--text); background: transparent;
     padding: 0 0 8px;
@@ -309,6 +310,12 @@
     outline: none;
     font-size: 14px; line-height: 1.8; color: var(--text); padding: 4px 0;
     min-height: 60vh;
+    font-family: 'Cabin', sans-serif !important;
+  }
+  #editor *, #editor p, #editor span, #editor div,
+  #editor td, #editor th, #editor li, #editor blockquote,
+  #editor h1, #editor h2, #editor h3 {
+    font-family: 'Cabin', sans-serif !important;
   }
   #editor:empty::before { content: 'Notlarınızı buraya yazın...'; color: var(--text-muted); }
   #editor h1, #editor h2, #editor h3 { margin: 12px 0 6px; }
@@ -1238,6 +1245,9 @@ function openPage(id) {
   document.getElementById('content-area').style.display = 'flex';
   document.getElementById('page-title-input').value = node.title || node.label;
   document.getElementById('editor').innerHTML = node.content || '';
+
+  // Tarayıcının varsayılan fontunu Cabin'e zorla
+  document.execCommand('fontName', false, 'Cabin');
 
   const disp = document.getElementById('page-title-display');
   disp.textContent = node.title || node.label;
