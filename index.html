@@ -278,13 +278,20 @@
   #content-wrapper { flex: 1; display: flex; overflow: hidden; }
 
   #content-area {
-    flex: 1; overflow-y: auto;
-    padding: 32px 48px;
+    flex: 1; overflow-y: scroll;
+    padding: 32px 48px 80px;
     background: var(--content-bg);
     display: flex; flex-direction: column; gap: 16px;
   }
-  #content-area::-webkit-scrollbar { width: 6px; }
-  #content-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* Belirgin scrollbar */
+  #content-area::-webkit-scrollbar { width: 10px; }
+  #content-area::-webkit-scrollbar-track { background: #f1f1f1; }
+  #content-area::-webkit-scrollbar-thumb {
+    background: #c8c8c8; border-radius: 5px;
+    border: 2px solid #f1f1f1;
+  }
+  #content-area::-webkit-scrollbar-thumb:hover { background: #aaa; }
 
   #page-title-input {
     font-size: 26px; font-weight: 700;
@@ -299,8 +306,9 @@
   #page-date { font-size: 11px; color: var(--text-muted); }
 
   #editor {
-    flex: 1; min-height: 400px; outline: none;
+    outline: none;
     font-size: 14px; line-height: 1.8; color: var(--text); padding: 4px 0;
+    min-height: 60vh;
   }
   #editor:empty::before { content: 'Notlarınızı buraya yazın...'; color: var(--text-muted); }
   #editor h1, #editor h2, #editor h3 { margin: 12px 0 6px; }
@@ -393,6 +401,35 @@
   [data-depth="1"] .tree-item { padding-left: 22px; }
   [data-depth="2"] .tree-item { padding-left: 34px; }
   [data-depth="3"] .tree-item { padding-left: 46px; }
+
+  /* ══ TABLE DRAG HANDLE ══ */
+  #table-drag-handle {
+    position: fixed;
+    width: 22px; height: 22px;
+    background: #19191b;
+    border-radius: 4px;
+    display: none;
+    align-items: center; justify-content: center;
+    cursor: grab;
+    color: #fcc012;
+    font-size: 13px;
+    z-index: 498;
+    user-select: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,.3);
+    transition: background .12s;
+  }
+  #table-drag-handle:hover { background: #333; }
+  #table-drag-handle.dragging { cursor: grabbing; opacity: .5; }
+
+  /* Sürükleme sırasında tabloyu soldur */
+  #editor table.drag-source { opacity: .35; }
+
+  /* Drop hedef çizgisi */
+  .drop-indicator {
+    height: 3px; background: #fcc012;
+    border-radius: 3px; margin: 4px 0;
+    pointer-events: none;
+  }
 
   /* ══ TABLE TOOLBAR (tablo seçince çıkar) ══ */
   #table-toolbar {
@@ -765,6 +802,9 @@
 
 <!-- ══ CONTEXT MENU ══ -->
 <div id="ctx-menu" class="ctx-menu" style="display:none;"></div>
+
+<!-- ══ TABLE DRAG HANDLE ══ -->
+<div id="table-drag-handle" title="Taşımak için sürükle">⠿</div>
 
 <!-- ══ TABLE TOOLBAR ══ -->
 <div id="table-toolbar">
@@ -1509,30 +1549,142 @@ let activeCell = null;
 let activeTable = null;
 
 document.addEventListener('click', e => {
-  const cell = e.target.closest('#editor td, #editor th');
-  const tb = document.getElementById('table-toolbar');
+  const cell   = e.target.closest('#editor td, #editor th');
+  const tb     = document.getElementById('table-toolbar');
+  const handle = document.getElementById('table-drag-handle');
   if (cell) {
     activeCell  = cell;
     activeTable = cell.closest('table');
     positionTableToolbar(cell);
-  } else if (!tb.contains(e.target)) {
-    tb.style.display = 'none';
+  } else if (!tb.contains(e.target) && !handle.contains(e.target)) {
+    tb.style.display     = 'none';
+    handle.style.display = 'none';
     activeCell  = null;
     activeTable = null;
   }
 });
 
 function positionTableToolbar(cell) {
-  const tb   = document.getElementById('table-toolbar');
-  const rect = cell.getBoundingClientRect();
+  const tb     = document.getElementById('table-toolbar');
+  const handle = document.getElementById('table-drag-handle');
+  const table  = cell.closest('table');
+  const tRect  = table.getBoundingClientRect();
+  const cRect  = cell.getBoundingClientRect();
+
+  // Araç çubuğu
   tb.style.display = 'flex';
-  // Ekrandan taşma kontrolü
-  const tbW = 520;
-  let left = rect.left;
+  const tbW = tb.scrollWidth || 520;
+  let left = cRect.left;
   if (left + tbW > window.innerWidth - 8) left = window.innerWidth - tbW - 8;
   tb.style.left = Math.max(8, left) + 'px';
-  tb.style.top  = (rect.top - 44) + 'px';
+  tb.style.top  = (tRect.top - 44) + 'px';
+
+  // Sürükleme tutacağı — tablonun sol üst köşesi
+  handle.style.display = 'flex';
+  handle.style.left = (tRect.left - 28) + 'px';
+  handle.style.top  = tRect.top + 'px';
 }
+
+// ────────────────────────────
+//  TABLE DRAG & DROP
+// ────────────────────────────
+let draggedTable   = null;
+let dropIndicator  = null;
+
+const dragHandle = document.getElementById('table-drag-handle');
+
+dragHandle.addEventListener('mousedown', e => {
+  if (!activeTable) return;
+  e.preventDefault();
+
+  draggedTable = activeTable;
+  draggedTable.classList.add('drag-source');
+  dragHandle.classList.add('dragging');
+  document.getElementById('table-toolbar').style.display = 'none';
+
+  // Hayalet klonu
+  const ghost = draggedTable.cloneNode(true);
+  ghost.id = 'table-ghost';
+  ghost.style.cssText = `
+    position:fixed; pointer-events:none; z-index:9999;
+    opacity:.7; background:#fff;
+    border:2px dashed #fcc012; border-radius:4px;
+    transform:scale(.97); transition:none;
+    max-width:${draggedTable.offsetWidth}px;
+  `;
+  document.body.appendChild(ghost);
+
+  function onMove(ev) {
+    const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+    const clientY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+    ghost.style.left = (clientX + 12) + 'px';
+    ghost.style.top  = (clientY - 12) + 'px';
+    updateDropIndicator(clientX, clientY);
+  }
+
+  function onUp() {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    ghost.remove();
+    dragHandle.classList.remove('dragging');
+    draggedTable.classList.remove('drag-source');
+    commitDrop();
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+});
+
+function updateDropIndicator(x, y) {
+  if (dropIndicator) dropIndicator.remove();
+  dropIndicator = null;
+
+  const editor = document.getElementById('editor');
+  const children = Array.from(editor.childNodes);
+
+  // En yakın block elemanını bul
+  let target = null, insertBefore = true;
+  for (const child of children) {
+    if (child === draggedTable) continue;
+    if (child.nodeType !== 1) continue;
+    const r = child.getBoundingClientRect();
+    if (y < r.top + r.height / 2) { target = child; insertBefore = true; break; }
+    target = child; insertBefore = false;
+  }
+
+  dropIndicator = document.createElement('div');
+  dropIndicator.className = 'drop-indicator';
+
+  if (!target) {
+    editor.appendChild(dropIndicator);
+  } else if (insertBefore) {
+    editor.insertBefore(dropIndicator, target);
+  } else {
+    editor.insertBefore(dropIndicator, target.nextSibling);
+  }
+}
+
+function commitDrop() {
+  const editor = document.getElementById('editor');
+  if (dropIndicator && dropIndicator.parentNode === editor) {
+    editor.insertBefore(draggedTable, dropIndicator);
+    dropIndicator.remove();
+  }
+  dropIndicator  = null;
+  draggedTable   = null;
+  // Toolbar & handle gizle
+  document.getElementById('table-drag-handle').style.display = 'none';
+  activeTable = null; activeCell = null;
+}
+
+// Scroll sırasında handle & toolbar pozisyonunu güncelle
+document.getElementById('content-area').addEventListener('scroll', () => {
+  if (activeCell) positionTableToolbar(activeCell);
+  else {
+    document.getElementById('table-drag-handle').style.display = 'none';
+    document.getElementById('table-toolbar').style.display = 'none';
+  }
+});
 
 function tableAddRowAbove() {
   if (!activeCell) return;
@@ -1604,6 +1756,7 @@ function tableDelete() {
   if (!activeTable) return;
   activeTable.remove();
   document.getElementById('table-toolbar').style.display = 'none';
+  document.getElementById('table-drag-handle').style.display = 'none';
   activeTable = null; activeCell = null;
 }
 
