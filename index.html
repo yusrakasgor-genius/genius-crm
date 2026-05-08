@@ -336,6 +336,32 @@
   body.resizing { user-select: none !important; cursor: col-resize !important; }
   body.resizing-row { user-select: none !important; cursor: row-resize !important; }
 
+  /* ══ IMAGE RESIZE OVERLAY ══ */
+  #img-resize-overlay {
+    position: fixed; z-index: 9990; pointer-events: none;
+    box-sizing: border-box;
+    outline: 2px solid #fcc012;
+    display: none;
+  }
+  #img-resize-overlay .img-rh {
+    position: absolute; width: 10px; height: 10px;
+    background: #fcc012; border: 2px solid #fff;
+    border-radius: 2px; pointer-events: all; box-sizing: border-box;
+  }
+  #img-resize-overlay .img-rh.nw { top:-5px;  left:-5px;  cursor: nw-resize; }
+  #img-resize-overlay .img-rh.ne { top:-5px;  right:-5px; cursor: ne-resize; }
+  #img-resize-overlay .img-rh.sw { bottom:-5px; left:-5px;  cursor: sw-resize; }
+  #img-resize-overlay .img-rh.se { bottom:-5px; right:-5px; cursor: se-resize; }
+  #img-resize-overlay .img-rh.n  { top:-5px;  left:50%; transform:translateX(-50%); cursor: n-resize; }
+  #img-resize-overlay .img-rh.s  { bottom:-5px; left:50%; transform:translateX(-50%); cursor: s-resize; }
+  #img-resize-overlay .img-rh.w  { top:50%; transform:translateY(-50%); left:-5px;  cursor: w-resize; }
+  #img-resize-overlay .img-rh.e  { top:50%; transform:translateY(-50%); right:-5px; cursor: e-resize; }
+  #img-resize-overlay .img-rh-size {
+    position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+    background: #19191b; color: #fff; font-size: 11px; padding: 2px 6px;
+    border-radius: 4px; white-space: nowrap; pointer-events: none; font-family: 'Cabin', sans-serif;
+  }
+
   /* Canlı boyutlandırma çizgisi */
   #resize-line {
     position: fixed; z-index: 9999; pointer-events: none; display: none;
@@ -825,6 +851,19 @@
 
 <!-- ══ RESIZE LINE ══ -->
 <div id="resize-line"></div>
+
+<!-- ══ IMAGE RESIZE OVERLAY ══ -->
+<div id="img-resize-overlay">
+  <div class="img-rh nw" data-dir="nw"></div>
+  <div class="img-rh n"  data-dir="n"></div>
+  <div class="img-rh ne" data-dir="ne"></div>
+  <div class="img-rh w"  data-dir="w"></div>
+  <div class="img-rh e"  data-dir="e"></div>
+  <div class="img-rh sw" data-dir="sw"></div>
+  <div class="img-rh s"  data-dir="s"></div>
+  <div class="img-rh se" data-dir="se"></div>
+  <div class="img-rh-size" id="img-rh-size"></div>
+</div>
 
 <!-- ══ TABLE DRAG HANDLE ══ -->
 <div id="table-drag-handle" title="Taşımak için sürükle">⠿</div>
@@ -2013,6 +2052,107 @@ makeResizable('resize-panel',   document.getElementById('pages-panel'));
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); savePage(); }
 });
+
+// ────────────────────────────
+//  IMAGE RESIZE
+// ────────────────────────────
+const imgOverlay  = document.getElementById('img-resize-overlay');
+const imgRhSize   = document.getElementById('img-rh-size');
+let   activeImg   = null;   // currently selected <img>
+let   imgResizing = null;   // { dir, startX, startY, startW, startH, aspectRatio }
+
+function positionImgOverlay(img) {
+  const r = img.getBoundingClientRect();
+  imgOverlay.style.display = 'block';
+  imgOverlay.style.left    = r.left   + 'px';
+  imgOverlay.style.top     = r.top    + 'px';
+  imgOverlay.style.width   = r.width  + 'px';
+  imgOverlay.style.height  = r.height + 'px';
+  imgRhSize.textContent    = Math.round(r.width) + ' × ' + Math.round(r.height);
+}
+
+function hideImgOverlay() {
+  imgOverlay.style.display = 'none';
+  activeImg = null;
+}
+
+// Editördeki görsele tıklandığında overlay göster
+editor.addEventListener('click', e => {
+  if (e.target.tagName === 'IMG') {
+    activeImg = e.target;
+    positionImgOverlay(activeImg);
+    e.stopPropagation();
+  } else if (!imgOverlay.contains(e.target)) {
+    hideImgOverlay();
+  }
+});
+
+// Overlay handle'larına mousedown
+imgOverlay.addEventListener('mousedown', e => {
+  const handle = e.target.closest('.img-rh[data-dir]');
+  if (!handle || !activeImg) return;
+  e.preventDefault();
+  const r = activeImg.getBoundingClientRect();
+  imgResizing = {
+    dir: handle.dataset.dir,
+    startX: e.clientX, startY: e.clientY,
+    startW: r.width,   startH: r.height,
+    startLeft: r.left, startTop: r.top,
+    aspectRatio: r.width / r.height
+  };
+  document.body.style.userSelect = 'none';
+});
+
+document.addEventListener('mousemove', e => {
+  if (!imgResizing || !activeImg) return;
+  const { dir, startX, startY, startW, startH, aspectRatio } = imgResizing;
+  const dx = e.clientX - startX;
+  const dy = e.clientY - startY;
+
+  let newW = startW, newH = startH;
+
+  if (dir === 'e'  || dir === 'ne' || dir === 'se') newW = Math.max(40, startW + dx);
+  if (dir === 'w'  || dir === 'nw' || dir === 'sw') newW = Math.max(40, startW - dx);
+  if (dir === 's'  || dir === 'se' || dir === 'sw') newH = Math.max(24, startH + dy);
+  if (dir === 'n'  || dir === 'ne' || dir === 'nw') newH = Math.max(24, startH - dy);
+
+  // köşe sürükleme: orantıyı koru (Shift basılı değilse)
+  if ((dir === 'nw' || dir === 'ne' || dir === 'sw' || dir === 'se') && !e.shiftKey) {
+    if (Math.abs(dx) > Math.abs(dy)) newH = newW / aspectRatio;
+    else                             newW = newH * aspectRatio;
+  }
+
+  activeImg.style.width  = Math.round(newW) + 'px';
+  activeImg.style.height = Math.round(newH) + 'px';
+  positionImgOverlay(activeImg);
+});
+
+document.addEventListener('mouseup', e => {
+  if (!imgResizing) return;
+  imgResizing = null;
+  document.body.style.userSelect = '';
+  if (activeImg) {
+    saveCurrentPage && clearTimeout(saveTimer);
+    saveTimer = setTimeout(savePage, 800);
+  }
+});
+
+// Scroll/resize: overlay'i güncelle
+document.getElementById('content-area').addEventListener('scroll', () => {
+  if (activeImg) positionImgOverlay(activeImg);
+});
+window.addEventListener('resize', () => {
+  if (activeImg) positionImgOverlay(activeImg);
+});
+
+// Overlay dışına tıklama
+document.addEventListener('mousedown', e => {
+  if (activeImg && !imgOverlay.contains(e.target) && e.target !== activeImg) {
+    hideImgOverlay();
+  }
+});
+
+function saveCurrentPage() { savePage(); }
 
 // ────────────────────────────
 //  IMAGE PASTE & DROP INTO EDITOR
