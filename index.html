@@ -728,7 +728,7 @@
   </div>
 
   <div id="sidebar-footer">
-    <button class="btn-add-customer" onclick="openModal('customer')">＋ Müşteri Ekle</button>
+    <button class="btn-add-customer" onclick="openModal('customer')">＋ Yeni Klasör</button>
   </div>
 </div>
 
@@ -1311,7 +1311,7 @@ function openModal(mode, parentId) {
   const nameInput  = document.getElementById('modal-name');
 
   if (mode === 'customer') {
-    document.getElementById('modal-title').textContent = '🏢 Yeni Müşteri';
+    document.getElementById('modal-title').textContent = '📁 Yeni Klasör';
     typeSelect.style.display = 'none';
   } else if (mode === 'child') {
     document.getElementById('modal-title').textContent = '＋ Yeni Öğe';
