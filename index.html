@@ -321,15 +321,28 @@
   #editor h1, #editor h2, #editor h3 { margin: 12px 0 6px; }
   #editor p { margin: 4px 0; }
   #editor ul, #editor ol { padding-left: 20px; }
-  #editor table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  #editor table { border-collapse: collapse; margin: 12px 0; width: auto; min-width: 100%; }
   #editor td, #editor th {
     border: 1px solid var(--border); padding: 7px 10px; font-size: 13px;
-    min-width: 80px; vertical-align: top; position: relative;
+    min-width: 60px; vertical-align: top; position: relative;
+    overflow: hidden;
   }
   #editor th { background: #f4f4f5; font-weight: 700; }
   #editor td:focus, #editor th:focus { outline: 2px solid #fcc012; outline-offset: -2px; background: #fffdf0; }
   #editor tr:hover td, #editor tr:hover th { background: #fafafa; }
   #editor tr:hover th { background: #f0f0f0; }
+
+  /* Boyutlandırma sırasında kullanıcı seçimi engelle */
+  body.resizing { user-select: none !important; cursor: col-resize !important; }
+  body.resizing-row { user-select: none !important; cursor: row-resize !important; }
+
+  /* Canlı boyutlandırma çizgisi */
+  #resize-line {
+    position: fixed; z-index: 9999; pointer-events: none; display: none;
+    background: #fcc012; opacity: .85;
+  }
+  #resize-line.col { width: 2px; top: 0; bottom: 0; }
+  #resize-line.row { height: 2px; left: 0; right: 0; }
   #editor blockquote { border-left: 3px solid var(--accent); padding-left: 12px; color: var(--text-muted); margin: 8px 0; }
 
   /* ══ EMPTY STATE ══ */
@@ -809,6 +822,9 @@
 
 <!-- ══ CONTEXT MENU ══ -->
 <div id="ctx-menu" class="ctx-menu" style="display:none;"></div>
+
+<!-- ══ RESIZE LINE ══ -->
+<div id="resize-line"></div>
 
 <!-- ══ TABLE DRAG HANDLE ══ -->
 <div id="table-drag-handle" title="Taşımak için sürükle">⠿</div>
@@ -1769,6 +1785,108 @@ function tableDelete() {
   document.getElementById('table-drag-handle').style.display = 'none';
   activeTable = null; activeCell = null;
 }
+
+// ────────────────────────────
+//  TABLE RESIZE (sütun & satır)
+// ────────────────────────────
+const RESIZE_ZONE = 6;   // kenara kaç px yakınlıkta tetikler
+let resizeState   = null;
+const resizeLine  = document.getElementById('resize-line');
+
+const editor = document.getElementById('editor');
+
+// İmleç şeklini ayarla — kenar algılama
+editor.addEventListener('mousemove', e => {
+  if (resizeState) return;
+  const cell = e.target.closest('#editor td, #editor th');
+  if (!cell) { editor.style.cursor = ''; return; }
+
+  const r = cell.getBoundingClientRect();
+  const nearRight  = e.clientX >= r.right  - RESIZE_ZONE;
+  const nearBottom = e.clientY >= r.bottom - RESIZE_ZONE;
+
+  editor.style.cursor = nearRight ? 'col-resize' : nearBottom ? 'row-resize' : '';
+});
+
+editor.addEventListener('mouseleave', () => {
+  if (!resizeState) editor.style.cursor = '';
+});
+
+// Boyutlandırmayı başlat
+editor.addEventListener('mousedown', e => {
+  if (draggedTable) return;   // sürükleme aktifken çalışma
+  const cell = e.target.closest('#editor td, #editor th');
+  if (!cell) return;
+
+  const r          = cell.getBoundingClientRect();
+  const nearRight  = e.clientX >= r.right  - RESIZE_ZONE;
+  const nearBottom = e.clientY >= r.bottom - RESIZE_ZONE;
+  if (!nearRight && !nearBottom) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  const table = cell.closest('table');
+
+  if (nearRight) {
+    // Sütun genişliği — bu sütundaki tüm hücreler
+    const colIdx  = cell.cellIndex;
+    const colCells = Array.from(table.querySelectorAll('tr'))
+                         .map(row => row.cells[colIdx])
+                         .filter(Boolean);
+
+    // Mevcut genişliği px olarak sabitle (yüzde/auto sorununu önle)
+    colCells.forEach(c => { c.style.width = c.offsetWidth + 'px'; });
+
+    resizeState = {
+      type: 'col', startX: e.clientX,
+      startW: cell.offsetWidth, colCells
+    };
+    document.body.classList.add('resizing');
+    resizeLine.className = 'col';
+    resizeLine.style.display = 'block';
+    resizeLine.style.left    = e.clientX + 'px';
+
+  } else {
+    // Satır yüksekliği
+    const row = cell.closest('tr');
+    resizeState = {
+      type: 'row', startY: e.clientY,
+      startH: row.offsetHeight, row
+    };
+    document.body.classList.add('resizing-row');
+    resizeLine.className = 'row';
+    resizeLine.style.display = 'block';
+    resizeLine.style.top     = e.clientY + 'px';
+  }
+});
+
+// Boyutlandırma hareketi
+document.addEventListener('mousemove', e => {
+  if (!resizeState) return;
+
+  if (resizeState.type === 'col') {
+    const delta = e.clientX - resizeState.startX;
+    const newW  = Math.max(40, resizeState.startW + delta);
+    resizeState.colCells.forEach(c => { c.style.width = newW + 'px'; });
+    resizeLine.style.left = e.clientX + 'px';
+
+  } else {
+    const delta = e.clientY - resizeState.startY;
+    const newH  = Math.max(24, resizeState.startH + delta);
+    resizeState.row.style.height = newH + 'px';
+    resizeLine.style.top = e.clientY + 'px';
+  }
+});
+
+// Boyutlandırmayı bitir
+document.addEventListener('mouseup', e => {
+  if (!resizeState) return;
+  resizeState = null;
+  resizeLine.style.display = 'none';
+  document.body.classList.remove('resizing', 'resizing-row');
+  editor.style.cursor = '';
+});
 
 function exportPage() {
   if (!ui.activePage) return;
