@@ -1089,6 +1089,7 @@ async function loadFromSupabase() {
     renderTree('');
     if (ui.activeFolder && db.nodes[ui.activeFolder]) renderPagesPanel(ui.activeFolder);
     if (ui.activePage  && db.nodes[ui.activePage])  openPage(ui.activePage);
+    await restoreLocalBackup();
   } catch(err) {
     setStatus('Bağlantı hatası: ' + err.message);
   }
@@ -1251,7 +1252,11 @@ function openPage(id) {
   const node = db.nodes[id];
   if (!node || node.type !== 'page') return;
 
-  if (ui.activePage && ui.activePage !== id) flushPage();
+  if (ui.activePage && ui.activePage !== id) {
+    flushPage();
+    clearTimeout(saveTimer);
+    savePage();  // anında Supabase'e kaydet
+  }
 
   ui.activePage = id;
   saveUi();
@@ -1907,13 +1912,56 @@ document.getElementById('editor').addEventListener('input', () => {
   clearTimeout(saveTimer);
   updateStatus();
   setStatus('Kaydediliyor...');
-  saveTimer = setTimeout(savePage, 2000);
+  backupToLocal();
+  saveTimer = setTimeout(savePage, 1000);
 });
 document.getElementById('page-title-input').addEventListener('input', e => {
   document.getElementById('page-title-display').textContent = e.target.value || 'Başlıksız';
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(savePage, 1500);
+  backupToLocal();
+  saveTimer = setTimeout(savePage, 800);
 });
+
+// yerel yedek — sekme kapanmadan önce son durumu koru
+function backupToLocal() {
+  if (!ui.activePage) return;
+  const backup = {
+    id: ui.activePage,
+    title: document.getElementById('page-title-input').value,
+    content: document.getElementById('editor').innerHTML,
+    ts: Date.now()
+  };
+  localStorage.setItem('genius_page_backup', JSON.stringify(backup));
+}
+
+window.addEventListener('beforeunload', () => {
+  clearTimeout(saveTimer);
+  flushPage();
+  backupToLocal();
+});
+
+// uygulama açılışında yerel yedek varsa Supabase'e geri yaz
+async function restoreLocalBackup() {
+  const raw = localStorage.getItem('genius_page_backup');
+  if (!raw) return;
+  try {
+    const bk = JSON.parse(raw);
+    if (!bk.id || !db.nodes[bk.id]) return;
+    const node = db.nodes[bk.id];
+    // Supabase'deki son kayıt zamanından daha yeniyse geri yükle
+    const sbTs = node._savedAt ? new Date(node._savedAt).getTime() : 0;
+    if (bk.ts > sbTs + 3000) {
+      node.title   = bk.title;
+      node.label   = bk.title;
+      node.content = bk.content;
+      await sbPatch(`crm_nodes?id=eq.${bk.id}`, {
+        label: node.label, title: node.title, content: node.content
+      });
+      console.log('Yerel yedek Supabase\'e geri yüklendi:', bk.id);
+    }
+    localStorage.removeItem('genius_page_backup');
+  } catch(e) { /* sessizce geç */ }
+}
 
 // ────────────────────────────
 //  SEARCH
